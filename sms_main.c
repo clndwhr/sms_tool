@@ -1,9 +1,12 @@
 /*
+ * 2025 iamromulan <cameronst1@live.com>
  * 2017 - 2024 Cezary Jackiewicz <cezary@eko.one.pl>
  * 2014 lovewilliam <ztong@vt.edu>
  * sms tool for various of 3G/4G/5G modem
  */
 #define _GNU_SOURCE
+#define VERSION "sms_tool 2025.1.2 mod by iamromulan"
+
 
 #include <ctype.h>
 #include <errno.h>
@@ -15,12 +18,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
+#include <sys/file.h>
 
 #include "pdu_lib/pdu.h"
 
 static void usage()
 {
 	fprintf(stderr,
+        "sms_tool 2025.1.2 mod by iamromulan\n"
 		"usage: [options] send phoneNumber message\n"
 		"       [options] recv\n"
 		"       [options] delete msg_index | all\n"
@@ -37,6 +42,8 @@ static void usage()
 		"\t-R use raw input (for ussd)\n"
 		"\t-r use raw output (for ussd and sms/recv)\n"
 		"\t-s <preferred storage> (for sms/recv/status)\n"
+	    "\t-t <timeout in seconds> (default: 180)\n"
+	    "\t--version (show version information)\n"
 		);
 	exit(2);
 }
@@ -104,12 +111,15 @@ static void setserial(int baudrate)
 	}
 }
 
-static void resetserial()
-{
-	if (tcsetattr(port, TCSANOW, &save_tio) < 0)
-		fprintf(stderr, "failed tcsetattr(%s): %s\n", dev, strerror(errno));
-	tcflush(port, TCIOFLUSH);
-	close(port);
+static void resetserial() {
+    // Unlock the device
+    if (flock(port, LOCK_UN) == -1) {
+        fprintf(stderr, "Failed to unlock device %s: %s\n", dev, strerror(errno));
+    }
+    if (tcsetattr(port, TCSANOW, &save_tio) < 0)
+        fprintf(stderr, "Failed tcsetattr(%s): %s\n", dev, strerror(errno));
+    tcflush(port, TCIOFLUSH);
+    close(port);
 }
 
 static void timeout()
@@ -169,22 +179,39 @@ int main(int argc, char* argv[])
 	int jsonoutput = 0;
 	int debug = 0;
 	int dcs = -1;
+    int timeout = 180;
 
-	while ((ch = getopt(argc, argv, "b:c:d:Ds:f:jRr")) != -1){
-		switch (ch) {
-		case 'b': baudrate = atoi(optarg); break;
-		case 'c': dcs = atoi(optarg); break;
-		case 'd': dev = optarg; break;
-		case 'D': debug = 1; break;
-		case 's': storage = optarg; break;
-		case 'f': dateformat = optarg; break;
-		case 'j': jsonoutput = 1; break;
-		case 'R': rawinput = 1; break;
-		case 'r': rawoutput = 1; break;
-		default:
-			usage();
-		}
-	}
+    // Define long options
+    static struct option long_options[] = {
+        {"version", no_argument, NULL, 1},
+        {NULL, 0, NULL, 0}
+    };
+
+    while ((ch = getopt_long(argc, argv, "b:c:d:Ds:f:jRrt:", long_options, NULL)) != -1) {
+        switch (ch) {
+        case 'b': baudrate = atoi(optarg); break;
+        case 'c': dcs = atoi(optarg); break;
+        case 'd': dev = optarg; break;
+        case 'D': debug = 1; break;
+        case 's': storage = optarg; break;
+        case 'f': dateformat = optarg; break;
+        case 'j': jsonoutput = 1; break;
+        case 'R': rawinput = 1; break;
+        case 'r': rawoutput = 1; break;
+        case 't':
+            timeout = atoi(optarg);
+            if (timeout <= 0) {
+                fprintf(stderr, "Invalid timeout value: %s\n", optarg);
+                exit(2);
+            }
+            break;
+        case 1: // Handle --version
+            printf("%s\n", VERSION);
+            exit(0);
+        default:
+            usage();
+        }
+    }
 
 	argv += optind; argc -= optind;
 
@@ -219,13 +246,22 @@ int main(int argc, char* argv[])
 	char pdustr[2*SMS_MAX_PDU_LENGTH+4];
 	unsigned char pdu[SMS_MAX_PDU_LENGTH];
 
-	// open the port
+    // Open the port
+    port = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY);
+    if (port < 0) {
+        fprintf(stderr, "Failed to open device %s: %s\n", dev, strerror(errno));
+        exit(1);
+    }
 
-	port = open(dev, O_RDWR|O_NONBLOCK|O_NOCTTY);
-	if (port < 0)
-		fprintf(stderr,"open(%s)\n", dev);
-	setserial(baudrate);
-	atexit(resetserial);
+    // Attempt to lock the device and wait if it's locked by another process
+    if (flock(port, LOCK_EX) == -1) {
+        fprintf(stderr, "Failed to lock device %s: %s\n", dev, strerror(errno));
+        close(port); // Clean up
+        exit(1);
+    }
+
+    setserial(baudrate);
+    atexit(resetserial); // Ensure device is unlocked on exit
 
 	close(port);
 	port = open(dev, O_RDWR|O_NOCTTY);
@@ -265,7 +301,7 @@ int main(int argc, char* argv[])
 		sleep(1);
 		fputs(pdustr, pf);
 
-		alarm(5);
+		alarm(timeout);
 		errno = 0;
 
 		while(fgets(buf, sizeof(buf), pfi))
@@ -711,7 +747,7 @@ int main(int argc, char* argv[])
 
 	if (!strcmp("at", argv[0]))
 	{
-		alarm(5);
+		alarm(timeout);
 		fputs(argv[1], pf);
 		fputs("\r\n", pf);
 
