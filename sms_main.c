@@ -35,7 +35,7 @@ static void usage()
 		"options:\n"
 		"\t-b <baudrate> (default: 115200)\n"
 		"\t-c coding scheme (for ussd, 0 - 7BIT, 2 - UCS2, default: detect)\n"
-		"\t-d <tty device> (default: /dev/ttyUSB0)\n"
+		"\t-d <tty device> (default: /dev/ttySMD11)\n"
 		"\t-D debug (for ussd and at)\n"
 		"\t-f <date/time format> (for sms/recv)\n"
 		"\t-j json output (for sms/recv)\n"
@@ -50,7 +50,7 @@ static void usage()
 
 static struct termios save_tio;
 static int port = -1;
-static const char* dev = "/dev/ttyUSB0";
+static const char* dev = "/dev/ttySMD11";
 static const char* storage = "";
 static const char* dateformat = "%D %T";
 
