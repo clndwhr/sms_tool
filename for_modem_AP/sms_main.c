@@ -5,7 +5,7 @@
  * sms tool for various of 3G/4G/5G modem
  */
 #define _GNU_SOURCE
-#define VERSION "sms_tool 2025.1.2 mod by iamromulan"
+#define VERSION "2025.1.19-APmod-iamromulan"
 
 
 #include <ctype.h>
@@ -25,7 +25,7 @@
 static void usage()
 {
 	fprintf(stderr,
-        "sms_tool 2025.1.2 mod by iamromulan\n"
+        "sms_tool 2025.1.19 AP mod by iamromulan\n"
 		"usage: [options] send phoneNumber message\n"
 		"       [options] recv\n"
 		"       [options] delete msg_index | all\n"
