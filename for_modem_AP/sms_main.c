@@ -265,8 +265,10 @@ int main(int argc, char* argv[])
 
 	close(port);
 	port = open(dev, O_RDWR|O_NOCTTY);
-	if (port < 0)
+	if (port < 0) {
 		fprintf(stderr,"reopen(%s)\n", dev);
+		exit(1);
+	}
 
 	FILE* pf = fdopen(port, "w");
 	FILE* pfi = fdopen(port, "r");
