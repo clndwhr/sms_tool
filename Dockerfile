@@ -5,7 +5,7 @@ FROM ghcr.io/natecarlson/rm520-modem-buildenv:main
 LABEL maintainer="Nate Carlson <git@natecarlson.com>"
 LABEL org.label-schema.application="rm520-build-env"
 
-ARG buildId=rm520-0.0.1
+ARG buildTarget=rm520
 
 # Add apt config to only install direct requirements
 #COPY 99minimal-apt-installs /etc/apt/apt.conf.d/
@@ -27,9 +27,8 @@ RUN mkdir -p /opt/builds && mkdir -p /opt/rm520 \
         && make \
         && chmod 755 /opt/entry-point.sh \
         && chown 1000:1000 /opt/entry-point.sh \
-        && mv /opt/rm520/sms_tool/for_modem_AP/sms_tool /opt/rm520/sms_tool/for_modem_AP/sms_tool-${buildId}
-        # &&  git tag -a ${buildId} -m "Build ${buildId}" \
-        # && git push origin ${buildId}
+        && mv /opt/rm520/sms_tool/for_modem_AP/sms_tool /opt/rm520/sms_tool/for_modem_AP/sms_tool-${buildTarget}
+
 ENV LC_ALL=en_US.UTF-8
 
 #CMD ["bash"]
