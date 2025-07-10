@@ -26,6 +26,7 @@ RUN mkdir -p /opt/builds && mkdir -p /opt/rm520 \
         && git clone https://github.com/clndwhr/sms_tool.git \
         && cd sms_tool/for_modem_AP \
         && sed -i -e "s/VERSION .*/VERSION \"$(date +%Y.%-m).${version}-APmod-iamromulan\"/" sms_main.c \
+        && sed -i -e "s/sms_tool .* AP mod by iamromulan/sms_tool $(date +%Y.%-m).${version} AP mod by iamromulan/" sms_main.c \
         && make \
         && chmod 755 /opt/entry-point.sh \
         && chown 1000:1000 /opt/entry-point.sh \
